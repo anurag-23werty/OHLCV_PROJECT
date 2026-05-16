@@ -27,6 +27,24 @@ logger = logging.getLogger(__name__)
 
 REQUIRED_COLUMNS = {"open", "high", "low", "close", "volume"}
 
+_INDIAN_SUFFIXES = (".NS", ".BO")
+
+
+def normalise_indian_symbol(symbol: str, exchange: str = "NS") -> str:
+    """
+    Return a Yahoo Finance symbol for Indian equities.
+
+    Bare symbols are treated as NSE tickers by default, so RELIANCE becomes
+    RELIANCE.NS. Existing Yahoo suffixes such as .NS and .BO are preserved.
+    """
+    cleaned = symbol.strip().upper()
+    if cleaned.endswith(_INDIAN_SUFFIXES):
+        return cleaned
+    exchange = exchange.strip().upper().lstrip(".")
+    if exchange not in {"NS", "BO"}:
+        raise ValueError("exchange must be 'NS' for NSE or 'BO' for BSE")
+    return f"{cleaned}.{exchange}"
+
 
 class OHLCVSource(ABC):
     """All data sources must implement this contract."""
@@ -100,6 +118,7 @@ class YahooFinanceSource(OHLCVSource):
         end:      str,
         interval: str = "1d",
     ) -> pd.DataFrame:
+        symbol = normalise_indian_symbol(symbol)
         logger.info("[YahooFinance] Fetching %s  %s → %s  interval=%s", symbol, start, end, interval)
 
         ticker = yf.Ticker(symbol)
@@ -123,6 +142,38 @@ class YahooFinanceSource(OHLCVSource):
                 df[col] = df[col].fillna(0)
 
         logger.info("[YahooFinance] ✓  %d bars  %s → %s", len(df), df.index[0].date(), df.index[-1].date())
+        return df
+
+    def fetch_latest(
+        self,
+        symbol: str,
+        period: str = "5d",
+        interval: str = "5m",
+        exchange: str = "NS",
+    ) -> pd.DataFrame:
+        """Fetch the freshest available yfinance bars for an Indian ticker."""
+        symbol = normalise_indian_symbol(symbol, exchange=exchange)
+        logger.info("[YahooFinance] Fetching latest %s  period=%s  interval=%s", symbol, period, interval)
+
+        raw = yf.Ticker(symbol).history(
+            period=period,
+            interval=interval,
+            auto_adjust=False,
+            actions=True,
+            prepost=False,
+        )
+
+        if raw.empty:
+            raise ValueError(
+                f"[YahooFinance] No live data returned for {symbol!r}. "
+                "Check the ticker, market hours, period, and interval."
+            )
+
+        df = self._normalise(raw, symbol)
+        for col in ("dividends", "stock_splits", "capital_gains"):
+            if col in df.columns:
+                df[col] = df[col].fillna(0)
+        logger.info("[YahooFinance] ✓  %d latest bars ending %s", len(df), df.index[-1])
         return df
 
 
@@ -168,7 +219,7 @@ class AlphaVantageSource(OHLCVSource):
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("AV_API_KEY", "demo")
         if self.api_key == "demo":
-            logger.warning("[AlphaVantage] Using 'demo' key — limited to IBM/MSFT sample data.")
+            logger.warning("[AlphaVantage] Using 'demo' key — limited sample data.")
 
     @property
     def source_name(self) -> str:

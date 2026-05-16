@@ -5,10 +5,9 @@ OHLCV Validation Framework — Live Demo
 Run this script to validate real stock data pulled from Yahoo Finance.
 
 Usage:
-    python run_demo.py                        # Defaults: AAPL, 2 years
-    python run_demo.py MSFT 2022-01-01 2024-01-01
-    python run_demo.py NVDA,TSLA,AAPL 2023-01-01 2024-06-01   # Multi-symbol
-    AV_API_KEY=YOUR_KEY python run_demo.py AAPL --source alphavantage
+    python files/run_demo.py
+    python files/run_demo.py RELIANCE 2024-01-01 2024-06-01
+    python files/run_demo.py RELIANCE,TCS,INFY 2024-01-01 2024-06-01
 """
 
 import sys
@@ -35,7 +34,7 @@ from core.models import Severity
 def main():
     # ── Parse simple CLI args ──────────────────────────────────────────────
     args     = sys.argv[1:]
-    symbols  = (args[0].split(",") if args else ["AAPL"])
+    symbols  = (args[0].split(",") if args else ["RELIANCE.NS"])
     start    = args[1] if len(args) > 1 else "2022-01-01"
     end      = args[2] if len(args) > 2 else "2024-06-01"
     source   = "yahoo"
@@ -63,7 +62,7 @@ def main():
         ValidationEngine.print_report(report)
 
         # Export CSV
-        out_csv = f"/tmp/{symbols[0]}_validation.csv"
+        out_csv = f"/tmp/{symbols[0].replace('.', '_')}_validation.csv"
         ValidationEngine.export_csv(report, out_csv)
         print(f"  📄 Detailed report saved to: {out_csv}\n")
 

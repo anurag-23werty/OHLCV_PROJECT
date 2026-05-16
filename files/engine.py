@@ -5,10 +5,10 @@ Top-level orchestrator. Call `ValidationEngine.run()` to get a
 complete ValidationReport for any symbol and date range.
 
 Quick start:
-    from ohlcv_framework.engine import ValidationEngine
+    from files.engine import ValidationEngine
 
     engine = ValidationEngine(source="yahoo")
-    report = engine.run("AAPL", start="2023-01-01", end="2024-01-01")
+    report = engine.run("RELIANCE.NS", start="2023-01-01", end="2024-01-01")
     print(report.summary())
     engine.print_report(report)
 """
