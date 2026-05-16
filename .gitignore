@@ -1,0 +1,21 @@
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VS Code settings
+.vscode/
+
+# Database
+*.db
+
+# OS files
+.DS_Store
+
+# Streamlit cache
+.streamlit/
+
+# Jupyter
+.ipynb_checkpoints/
